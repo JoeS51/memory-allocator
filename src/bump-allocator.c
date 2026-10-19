@@ -6,8 +6,6 @@
 #define ARENA_SIZE 4096
 #define ALIGNMENT 16
 
-static alignas(16) unsigned char buffer[ARENA_SIZE];
-
 typedef struct {
   unsigned char *memory;
   size_t capacity;
