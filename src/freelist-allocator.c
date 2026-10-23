@@ -123,18 +123,19 @@ Arena arena_create(size_t capacity) {
 void *arena_alloc(Arena *arena, size_t size) {
   Node *curr_node = arena->freelist;
   Node *prev_node = NULL;
-  while(curr_node != NULL && (!curr_node ->is_free || curr_node->size < size)) {
+  while(curr_node != NULL && (!curr_node ->is_free || curr_node->size < size + sizeof(Node))) {
     prev_node = curr_node;
     curr_node = (Node *) curr_node->next;
   }
 
+  //TODO: what if the split isn't possible? there is just enough space? 
   size_t allocation_size = align_up(size, ALIGNMENT);
   // allocation was successful
   if (curr_node != NULL) {
     // split this block
     Node rest_of_node = {
       .is_free = true,
-      .size = curr_node->size - allocation_size,
+      .size = curr_node->size - allocation_size - sizeof(Node),
       .next = NULL,
     };
 
@@ -152,6 +153,7 @@ void *arena_alloc(Arena *arena, size_t size) {
       Node *ptr_2 = (Node *) rest_of_node_ptr;
       *ptr_2 = rest_of_node;
       ptr->next = ptr_2;
+      return ptr + 1;
     } else {
       // POINT rest_of_node's next ptr to curr_node.next 
       // calculate where in the mmap region you need to write new_node and rest_of_node to
@@ -167,9 +169,11 @@ void *arena_alloc(Arena *arena, size_t size) {
 
       *curr_node = new_node;
       curr_node->next = ptr;
+      return curr_node + 1;
     }
   } else {
     printf("not enough room for allocation");
+    return NULL;
   }
 }
 
